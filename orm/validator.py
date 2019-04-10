@@ -7,6 +7,7 @@ import concurrent.futures
 import time
 import json
 import pickle
+import traceback
 
 import pkg_resources
 from rfc3986 import validators, uri_reference
@@ -23,7 +24,27 @@ class ORMSchemaException(Exception):
 class ValidateRuleConstraintsException(Exception):
     pass
 
-def validate_rule_files(yml_files, cache_path=None):
+def get_yamllintconf(yamllintconf_file):
+    try:
+        if yamllintconf_file and os.path.isfile(yamllintconf_file):
+            return YamlLintConfig(file=yamllintconf_file)
+        else:
+            return YamlLintConfig('extends: default')
+    except TypeError as e:
+        if  str(e) == "list indices must be integers or slices, not dict" and \
+           "if self.rules[rule] == 'enable':" in traceback.format_exc():
+            # Workaround for yamllint 1.11.1>,<=1.15.0 bug for when yamllintconf
+            # rules dict is a list instead of dict (as in our invalid config testfile).
+            return None
+        else:
+            raise
+    except YamlLintConfigError as e:
+        print(e, file=stderr)
+        return None
+
+def validate_rule_files(yml_files, yamllintconf_file, cache_path=None):
+    if not validate_yaml_files(yml_files, yamllintconf_file):
+        return False
     valid = True
     for yml_file in yml_files:
         if not validate_rule_schema(yml_file):
