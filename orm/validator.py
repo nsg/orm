@@ -7,7 +7,6 @@ import concurrent.futures
 import time
 import json
 import pickle
-import traceback
 
 import pkg_resources
 from rfc3986 import validators, uri_reference
